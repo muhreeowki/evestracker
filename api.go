@@ -15,9 +15,10 @@ type APIServer struct {
 
 type APIFunc func(http.ResponseWriter, *http.Request) *APIError
 
-func NewAPIServer(listenAddr string) *APIServer {
+func NewAPIServer(listenAddr string, store Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
+		store:      store,
 	}
 }
 
