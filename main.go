@@ -10,8 +10,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not connect to DB: %s", err.Error())
 	}
-	fmt.Println(store)
+	if err := store.Init(); err != nil {
+		log.Fatalf("could not connect to DB: %s", err.Error())
+	}
 
+	fmt.Println(store)
 	server := NewAPIServer(":3000", store)
 	server.Run()
 }
