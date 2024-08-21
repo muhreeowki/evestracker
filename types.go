@@ -4,6 +4,13 @@ import (
 	"time"
 )
 
+type CreateMidwifeRequest struct {
+	FirstName string `json:"firstName" binding:"required"`
+	LastName  string `json:"lastName" binding:"required"`
+	Email     string `json:"email" validate:"email" binding:"required"`
+	Password  string `json:"password" binding:"required"`
+}
+
 type Midwife struct {
 	ID        uint      `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`

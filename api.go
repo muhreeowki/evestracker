@@ -26,6 +26,7 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 func (s *APIServer) Run() {
 	r := chi.NewRouter()
 	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
+	r.Post("/midwife", makeHTTPHandlerFunc(s.handleCreateMidwife))
 
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
 
@@ -49,6 +50,27 @@ func (s *APIServer) handleGetMidwifeByID(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, http.StatusOK, midwife)
+	return nil
+}
+
+func (s *APIServer) handleCreateMidwife(w http.ResponseWriter, r *http.Request) *APIError {
+	createMidwifeReq := new(CreateMidwifeRequest)
+	if err := json.NewDecoder(r.Body).Decode(createMidwifeReq); err != nil {
+		return &APIError{
+			Code:         http.StatusBadRequest,
+			ErrorMessage: "bad request data",
+		}
+	}
+
+	_, err := s.store.CreateMidwife(createMidwifeReq)
+	if err != nil {
+		return &APIError{
+			Code:         http.StatusBadRequest,
+			ErrorMessage: err.Error(),
+		}
+	}
+
+	writeJSON(w, http.StatusOK, createMidwifeReq)
 	return nil
 }
 

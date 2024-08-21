@@ -12,7 +12,7 @@ import (
 type Storage interface {
 	// Midwife Functions
 	GetMidwifeByID(int) (*Midwife, error)
-	CreateMidwife(Midwife) (*Midwife, error)
+	CreateMidwife(*CreateMidwifeRequest) (*Midwife, error)
 	DeleteMidwifeByID(int) error
 	UpdateMidwifeByID(int) (*Midwife, error)
 	GetMidwifeMothers(int) ([]*Mother, error)
@@ -47,6 +47,21 @@ func (s *PostgresStore) Init() error {
 	if err := s.CreateMidwifeTable(); err != nil {
 		return err
 	}
+	if err := s.AddPGCrypto(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *PostgresStore) AddPGCrypto() error {
+	query := `CREATE EXTENSION IF NOT EXISTS pgcrypto`
+	res, err := s.db.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("AddPGCrypto res: ", res)
+
 	return nil
 }
 
@@ -92,11 +107,10 @@ func (s *PostgresStore) CreateMidwifeTable() error {
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     deleted_at TIMESTAMP,
-    firstname TEXT,
-    lastname TEXT,
-    birth_date TIMESTAMP,
-    email TEXT,
-    pass TEXT,
+    firstname TEXT NOT NULL,
+    lastname TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    pass TEXT NOT NULL,
     image_url TEXT,
     mothers INTEGER[]
   )`
@@ -123,7 +137,20 @@ func (s *PostgresStore) GetMidwifeByID(id int) (*Midwife, error) {
 
 	return midwife, nil
 }
-func (s *PostgresStore) CreateMidwife(Midwife) (*Midwife, error)  { return nil, nil }
+
+func (s *PostgresStore) CreateMidwife(midwife *CreateMidwifeRequest) (*Midwife, error) {
+	query := `
+  INSERT INTO midwife 
+  (firstname, lastname, email, pass)
+  VALUES ($1, $2, $3, crypt($4, gen_salt('bf')))
+  `
+	_, err := s.db.Query(query, midwife.FirstName, midwife.LastName, midwife.Email, midwife.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create midwife: %s", err.Error())
+	}
+	return nil, nil
+}
+
 func (s *PostgresStore) DeleteMidwifeByID(int) error              { return nil }
 func (s *PostgresStore) UpdateMidwifeByID(int) (*Midwife, error)  { return nil, nil }
 func (s *PostgresStore) GetMidwifeMothers(int) ([]*Mother, error) { return nil, nil }
