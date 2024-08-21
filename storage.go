@@ -36,6 +36,7 @@ func NewPostgresStore() (*PostgresStore, error) {
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
+		log.Panicf(err.Error())
 		return nil, fmt.Errorf("could not connect to DB: %s", err.Error())
 	}
 
@@ -46,12 +47,15 @@ func NewPostgresStore() (*PostgresStore, error) {
 
 func (s *PostgresStore) Init() error {
 	if err := s.CreateMotherTable(); err != nil {
+		log.Panicf(err.Error())
 		return err
 	}
 	if err := s.CreateMidwifeTable(); err != nil {
+		log.Panicf(err.Error())
 		return err
 	}
 	if err := s.AddPGCrypto(); err != nil {
+		log.Panicf(err.Error())
 		return err
 	}
 	return nil
@@ -61,6 +65,7 @@ func (s *PostgresStore) AddPGCrypto() error {
 	query := `CREATE EXTENSION IF NOT EXISTS pgcrypto`
 	res, err := s.db.Exec(query)
 	if err != nil {
+		log.Panicf(err.Error())
 		return err
 	}
 
@@ -96,6 +101,7 @@ func (s *PostgresStore) CreateMotherTable() error {
 
 	res, err := s.db.Exec(query)
 	if err != nil {
+		log.Panicf(err.Error())
 		return fmt.Errorf("could not create mother table: %s", err)
 	}
 
@@ -119,6 +125,7 @@ func (s *PostgresStore) CreateMidwifeTable() error {
 
 	res, err := s.db.Exec(query)
 	if err != nil {
+		log.Panicf(err.Error())
 		return fmt.Errorf("could not create midwife table: %s", err)
 	}
 
@@ -129,11 +136,13 @@ func (s *PostgresStore) CreateMidwifeTable() error {
 
 // GetMidwifeByID gets a midwife from the database with the matching id
 func (s *PostgresStore) GetMidwifeByID(id int) (*Midwife, error) {
-	query := `SELECT * FROM midwife WHERE id == $1 LIMIT 1`
+	query := `SELECT * FROM midwife WHERE id = $1 LIMIT 1`
 	row := s.db.QueryRow(query, id)
 
 	midwife := new(Midwife)
-	if err := row.Scan(midwife); err != nil {
+	midwifeFields := getFields(midwife)
+	if err := row.Scan(midwifeFields...); err != nil {
+		log.Panicf(err.Error())
 		return nil, fmt.Errorf("no account found with id %d", id)
 	}
 
@@ -148,17 +157,11 @@ func (s *PostgresStore) GetMidwives() ([]*Midwife, error) {
 		log.Panicf(err.Error())
 		return nil, fmt.Errorf("could not get midwives")
 	}
-	midwives := []*Midwife{}
 
+	midwives := []*Midwife{}
 	for rows.Next() {
 		midwife := new(Midwife)
-		s := reflect.ValueOf(midwife).Elem()
-		numFields := s.NumField()
-		midwifeFields := make([]interface{}, numFields)
-		for i := 0; i < numFields; i++ {
-			field := s.Field(i)
-			midwifeFields[i] = field.Addr().Interface()
-		}
+		midwifeFields := getFields(midwife)
 
 		if err := rows.Scan(midwifeFields...); err != nil {
 			log.Panicf(err.Error())
@@ -179,6 +182,7 @@ func (s *PostgresStore) CreateMidwife(midwife *CreateMidwifeRequest) (*Midwife, 
   `
 	_, err := s.db.Query(query, midwife.FirstName, midwife.LastName, midwife.Email, midwife.Password, time.Now())
 	if err != nil {
+		log.Panicf(err.Error())
 		return nil, fmt.Errorf("failed to create midwife: %s", err.Error())
 	}
 	return nil, nil
@@ -193,3 +197,16 @@ func (s *PostgresStore) GetMotherByID(int) *Mother             { return nil }
 func (s *PostgresStore) CreateMother(Midwife) (*Mother, error) { return nil, nil }
 func (s *PostgresStore) DeleteMotherByID(int) error            { return nil }
 func (s *PostgresStore) UpdateMotherByID(int) (*Mother, error) { return nil, nil }
+
+func getFields(v any) []interface{} {
+	s := reflect.ValueOf(v).Elem()
+	numFields := s.NumField()
+	fields := make([]interface{}, numFields)
+
+	for i := 0; i < numFields; i++ {
+		field := s.Field(i)
+		fields[i] = field.Addr().Interface()
+	}
+
+	return fields
+}
