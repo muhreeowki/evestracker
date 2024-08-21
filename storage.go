@@ -11,7 +11,7 @@ import (
 // TODO: CRUD functions for Midwife and Patients
 type Storage interface {
 	// Midwife Functions
-	GetMidwifeByID(int) *Midwife
+	GetMidwifeByID(int) (*Midwife, error)
 	CreateMidwife(Midwife) (*Midwife, error)
 	DeleteMidwifeByID(int) error
 	UpdateMidwifeByID(int) (*Midwife, error)
@@ -112,7 +112,17 @@ func (s *PostgresStore) CreateMidwifeTable() error {
 }
 
 // Midwife Functions
-func (s *PostgresStore) GetMidwifeByID(int) *Midwife              { return nil }
+func (s *PostgresStore) GetMidwifeByID(id int) (*Midwife, error) {
+	query := `SELECT * FROM midwife WHERE id == $1 LIMIT 1`
+	row := s.db.QueryRow(query, id)
+
+	midwife := new(Midwife)
+	if err := row.Scan(midwife); err != nil {
+		return nil, fmt.Errorf("no account found with id %d", id)
+	}
+
+	return midwife, nil
+}
 func (s *PostgresStore) CreateMidwife(Midwife) (*Midwife, error)  { return nil, nil }
 func (s *PostgresStore) DeleteMidwifeByID(int) error              { return nil }
 func (s *PostgresStore) UpdateMidwifeByID(int) (*Midwife, error)  { return nil, nil }

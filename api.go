@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -24,15 +25,30 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 
 func (s *APIServer) Run() {
 	r := chi.NewRouter()
-	r.Get("/", makeHTTPHandlerFunc(s.handleGetMidwife))
+	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
 
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
 
 	http.ListenAndServe(s.listenAddr, r)
 }
 
-func (s *APIServer) handleGetMidwife(w http.ResponseWriter, r *http.Request) *APIError {
-	writeJSON(w, http.StatusOK, "Hello World")
+func (s *APIServer) handleGetMidwifeByID(w http.ResponseWriter, r *http.Request) *APIError {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+	midwife, err := s.store.GetMidwifeByID(id)
+	if err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, midwife)
 	return nil
 }
 
