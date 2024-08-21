@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -12,16 +13,15 @@ type CreateMidwifeRequest struct {
 }
 
 type Midwife struct {
-	ID        uint      `json:"id"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	DeletedAt time.Time
-	FirstName string `json:"firstName" binding:"required"`
-	LastName  string `json:"lastName" binding:"required"`
-	Email     string `json:"email" validate:"email" binding:"required"`
-	Password  string `json:"password" binding:"required"`
-	ImageURL  string `json:"profileImage"`
-	Mothers   []Mother
+	ID        uint           `db:"id"          json:"id"`
+	FirstName string         `db:"firstname"   json:"firstName" binding:"required"`
+	LastName  string         `db:"lastname"    json:"lastName"  binding:"required"`
+	Email     string         `db:"email"       json:"email"     binding:"required" validate:"email"`
+	Password  string         `db:"pass"        json:"password"  binding:"required"`
+	ImageURL  sql.NullString `db:"image_url"   json:"imageURL"`
+	// Mothers   []sql.NullInt64 `db:"mothers"     json:"mothers"`
+	CreatedAt *time.Time   `db:"created_at"  json:"createdAt"`
+	UpdatedAt sql.NullTime `db:"updated_at"  json:"updatedAt"`
 }
 
 type Mother struct {

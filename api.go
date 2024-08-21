@@ -26,11 +26,25 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 func (s *APIServer) Run() {
 	r := chi.NewRouter()
 	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
+	r.Get("/midwife", makeHTTPHandlerFunc(s.handleGetMidwives))
 	r.Post("/midwife", makeHTTPHandlerFunc(s.handleCreateMidwife))
 
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
 
 	http.ListenAndServe(s.listenAddr, r)
+}
+
+func (s *APIServer) handleGetMidwives(w http.ResponseWriter, r *http.Request) *APIError {
+	midwives, err := s.store.GetMidwives()
+	if err != nil {
+		return &APIError{
+			ErrorMessage: err.Error(),
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, midwives)
+	return nil
 }
 
 func (s *APIServer) handleGetMidwifeByID(w http.ResponseWriter, r *http.Request) *APIError {

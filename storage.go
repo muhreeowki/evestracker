@@ -3,7 +3,10 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
+	"reflect"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -12,6 +15,7 @@ import (
 type Storage interface {
 	// Midwife Functions
 	GetMidwifeByID(int) (*Midwife, error)
+	GetMidwives() ([]*Midwife, error)
 	CreateMidwife(*CreateMidwifeRequest) (*Midwife, error)
 	DeleteMidwifeByID(int) error
 	UpdateMidwifeByID(int) (*Midwife, error)
@@ -104,15 +108,13 @@ func (s *PostgresStore) CreateMotherTable() error {
 func (s *PostgresStore) CreateMidwifeTable() error {
 	query := `CREATE TABLE IF NOT EXISTS midwife (
     id SERIAL PRIMARY KEY,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP,
     firstname TEXT NOT NULL,
     lastname TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     pass TEXT NOT NULL,
     image_url TEXT,
-    mothers INTEGER[]
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
   )`
 
 	res, err := s.db.Exec(query)
@@ -125,7 +127,7 @@ func (s *PostgresStore) CreateMidwifeTable() error {
 	return nil
 }
 
-// Midwife Functions
+// GetMidwifeByID gets a midwife from the database with the matching id
 func (s *PostgresStore) GetMidwifeByID(id int) (*Midwife, error) {
 	query := `SELECT * FROM midwife WHERE id == $1 LIMIT 1`
 	row := s.db.QueryRow(query, id)
@@ -138,13 +140,44 @@ func (s *PostgresStore) GetMidwifeByID(id int) (*Midwife, error) {
 	return midwife, nil
 }
 
+func (s *PostgresStore) GetMidwives() ([]*Midwife, error) {
+	query := `SELECT * FROM midwife`
+
+	rows, err := s.db.Query(query)
+	if err != nil {
+		log.Panicf(err.Error())
+		return nil, fmt.Errorf("could not get midwives")
+	}
+	midwives := []*Midwife{}
+
+	for rows.Next() {
+		midwife := new(Midwife)
+		s := reflect.ValueOf(midwife).Elem()
+		numFields := s.NumField()
+		midwifeFields := make([]interface{}, numFields)
+		for i := 0; i < numFields; i++ {
+			field := s.Field(i)
+			midwifeFields[i] = field.Addr().Interface()
+		}
+
+		if err := rows.Scan(midwifeFields...); err != nil {
+			log.Panicf(err.Error())
+			return nil, fmt.Errorf("could not get midwives")
+		}
+
+		midwives = append(midwives, midwife)
+	}
+
+	return midwives, nil
+}
+
 func (s *PostgresStore) CreateMidwife(midwife *CreateMidwifeRequest) (*Midwife, error) {
 	query := `
   INSERT INTO midwife 
-  (firstname, lastname, email, pass)
-  VALUES ($1, $2, $3, crypt($4, gen_salt('bf')))
+  (firstname, lastname, email, pass, created_at)
+  VALUES ($1, $2, $3, crypt($4, gen_salt('bf')), $5)
   `
-	_, err := s.db.Query(query, midwife.FirstName, midwife.LastName, midwife.Email, midwife.Password)
+	_, err := s.db.Query(query, midwife.FirstName, midwife.LastName, midwife.Email, midwife.Password, time.Now())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create midwife: %s", err.Error())
 	}
