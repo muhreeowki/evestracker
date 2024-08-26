@@ -30,6 +30,7 @@ func (s *APIServer) Run() {
 	r.Post("/midwife", makeHTTPHandlerFunc(s.handleCreateMidwife))
 	r.Get("/midwife", makeHTTPHandlerFunc(s.handleGetMidwives))
 	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
+	r.Get("/midwife/{id}/mothers", makeHTTPHandlerFunc(s.handleGetMidwifeMothers))
 	r.Delete("/midwife/{id}", makeHTTPHandlerFunc(s.handleDeleteMidwifeByID))
 	// Mother endpoints
 	r.Post("/mother", makeHTTPHandlerFunc(s.handleCreateMother))
@@ -92,6 +93,26 @@ func (s *APIServer) handleGetMidwifeByID(w http.ResponseWriter, r *http.Request)
 	}
 
 	return writeJSON(w, http.StatusOK, midwife)
+}
+
+func (s *APIServer) handleGetMidwifeMothers(w http.ResponseWriter, r *http.Request) *APIError {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	mothers, err := s.store.GetMidwifeMothers(id)
+	if err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	return writeJSON(w, http.StatusOK, mothers)
 }
 
 func (s *APIServer) handleDeleteMidwifeByID(w http.ResponseWriter, r *http.Request) *APIError {

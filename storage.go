@@ -154,6 +154,32 @@ func (s *PostgresStore) GetMidwifeByID(id int) (*Midwife, error) {
 	return midwife, nil
 }
 
+func (s *PostgresStore) GetMidwifeMothers(id int) (mothers []*Mother, err error) {
+	midwife, err := s.GetMidwifeByID(id) // Midwife
+	if err != nil {
+		return nil, err
+	}
+
+	query := `SELECT * from mother WHERE midwife_id = $1`
+	row, err := s.db.Query(query, midwife.ID)
+	if err != nil {
+		log.Println(err.Error())
+		return nil, fmt.Errorf("unable to get mothers", id)
+	}
+
+	for row.Next() {
+		mother := new(Mother)
+		motherFields := getFields(mother)
+		if err := row.Scan(motherFields...); err != nil {
+			log.Println(err.Error())
+			return nil, fmt.Errorf("no account found with id %d", id)
+		}
+		mothers = append(mothers, mother)
+	}
+
+	return mothers, nil
+}
+
 func (s *PostgresStore) DeleteMidwifeByID(id int) error {
 	query := `DELETE FROM midwife WHERE id = $1`
 	_, err := s.db.Exec(query, id)
@@ -165,13 +191,6 @@ func (s *PostgresStore) DeleteMidwifeByID(id int) error {
 }
 
 func (s *PostgresStore) UpdateMidwifeByID(int) (*Midwife, error) { return nil, nil }
-func (s *PostgresStore) GetMidwifeMothers(id int) (midwives []*Mother, err error) {
-	_, err = s.GetMidwifeByID(id) // Midwife
-	if err != nil {
-		return nil, err
-	}
-	return midwives, nil
-}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MOTHER TABLE FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
