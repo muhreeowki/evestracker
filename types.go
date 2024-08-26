@@ -67,3 +67,31 @@ type CreateMotherRequest struct {
 	RhFactor       string     `json:"rhFactor"`
 	MidwifeID      *uint32    `json:"midwifeID"`
 }
+
+func nullString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: s, Valid: true}
+}
+
+func nullTime(t *time.Time) sql.NullTime {
+	if t == nil {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: *t, Valid: true}
+}
+
+func nullFloat64(f *float64) sql.NullFloat64 {
+	if f == nil {
+		return sql.NullFloat64{}
+	}
+	return sql.NullFloat64{Float64: *f, Valid: true}
+}
+
+func nullInt32(i *uint32) sql.NullInt32 {
+	if i == nil {
+		return sql.NullInt32{}
+	}
+	return sql.NullInt32{Int32: int32(*i), Valid: true}
+}

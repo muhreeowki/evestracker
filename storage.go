@@ -23,7 +23,7 @@ type Storage interface {
 	// Mother Functions
 	CreateMother(*CreateMotherRequest) (*Mother, error)
 	GetMothers() ([]*Mother, error)
-	GetMotherByID(int) *Mother
+	GetMotherByID(int) (*Mother, error)
 	UpdateMotherByID(int) (*Mother, error)
 	DeleteMotherByID(int) error
 }
@@ -235,7 +235,19 @@ func (s *PostgresStore) GetMothers() ([]*Mother, error) {
 	return mothers, nil
 }
 
-func (s *PostgresStore) GetMotherByID(int) *Mother { return nil }
+func (s *PostgresStore) GetMotherByID(id int) (*Mother, error) {
+	query := `SELECT * FROM mother WHERE id = $1 LIMIT 1`
+	row := s.db.QueryRow(query, id)
+
+	mother := new(Mother)
+	motherFields := getFields(mother)
+	if err := row.Scan(motherFields...); err != nil {
+		log.Println(err.Error())
+		return nil, fmt.Errorf("no mother account found with id %d", id)
+	}
+
+	return mother, nil
+}
 
 func (s *PostgresStore) CreateMother(mother *CreateMotherRequest) (*Mother, error) {
 	query := `
@@ -286,32 +298,4 @@ func getFields(v any) []interface{} {
 	}
 
 	return fields
-}
-
-func nullString(s string) sql.NullString {
-	if s == "" {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: s, Valid: true}
-}
-
-func nullTime(t *time.Time) sql.NullTime {
-	if t == nil {
-		return sql.NullTime{}
-	}
-	return sql.NullTime{Time: *t, Valid: true}
-}
-
-func nullFloat64(f *float64) sql.NullFloat64 {
-	if f == nil {
-		return sql.NullFloat64{}
-	}
-	return sql.NullFloat64{Float64: *f, Valid: true}
-}
-
-func nullInt32(i *uint32) sql.NullInt32 {
-	if i == nil {
-		return sql.NullInt32{}
-	}
-	return sql.NullInt32{Int32: int32(*i), Valid: true}
 }

@@ -31,8 +31,9 @@ func (s *APIServer) Run() {
 	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
 	r.Delete("/midwife/{id}", makeHTTPHandlerFunc(s.handleDeleteMidwifeByID))
 
-	r.Get("/mother", makeHTTPHandlerFunc(s.handleGetMothers))
 	r.Post("/mother", makeHTTPHandlerFunc(s.handleCreateMother))
+	r.Get("/mother", makeHTTPHandlerFunc(s.handleGetMothers))
+	r.Get("/mother/{id}", makeHTTPHandlerFunc(s.handleGetMotherByID))
 
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
 
@@ -140,7 +141,26 @@ func (s *APIServer) handleCreateMother(w http.ResponseWriter, r *http.Request) *
 
 	return writeJSON(w, http.StatusOK, createMotherReq)
 }
-func (s *APIServer) handleGetMotherByID(w http.ResponseWriter, r *http.Request) *APIError { return nil }
+
+func (s *APIServer) handleGetMotherByID(w http.ResponseWriter, r *http.Request) *APIError {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+	mother, err := s.store.GetMotherByID(id)
+	if err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	return writeJSON(w, http.StatusOK, mother)
+}
+
 func (s *APIServer) handleDeleteMotherByID(w http.ResponseWriter, r *http.Request) *APIError {
 	return nil
 }
