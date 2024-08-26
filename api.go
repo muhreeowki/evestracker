@@ -26,19 +26,41 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 
 func (s *APIServer) Run() {
 	r := chi.NewRouter()
-	r.Get("/midwife", makeHTTPHandlerFunc(s.handleGetMidwives))
+	// Midwife endpoints
 	r.Post("/midwife", makeHTTPHandlerFunc(s.handleCreateMidwife))
+	r.Get("/midwife", makeHTTPHandlerFunc(s.handleGetMidwives))
 	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
 	r.Delete("/midwife/{id}", makeHTTPHandlerFunc(s.handleDeleteMidwifeByID))
-
+	// Mother endpoints
 	r.Post("/mother", makeHTTPHandlerFunc(s.handleCreateMother))
 	r.Get("/mother", makeHTTPHandlerFunc(s.handleGetMothers))
 	r.Get("/mother/{id}", makeHTTPHandlerFunc(s.handleGetMotherByID))
 	r.Delete("/mother/{id}", makeHTTPHandlerFunc(s.handleDeleteMotherByID))
 
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
-
 	http.ListenAndServe(s.listenAddr, r)
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MIDWIFE HANDLERS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+func (s *APIServer) handleCreateMidwife(w http.ResponseWriter, r *http.Request) *APIError {
+	createMidwifeReq := new(CreateMidwifeRequest)
+	if err := json.NewDecoder(r.Body).Decode(createMidwifeReq); err != nil {
+		return &APIError{
+			Code:         http.StatusBadRequest,
+			ErrorMessage: "bad request data",
+		}
+	}
+
+	_, err := s.store.CreateMidwife(createMidwifeReq)
+	if err != nil {
+		return &APIError{
+			Code:         http.StatusBadRequest,
+			ErrorMessage: err.Error(),
+		}
+	}
+
+	return writeJSON(w, http.StatusOK, createMidwifeReq)
 }
 
 func (s *APIServer) handleGetMidwives(w http.ResponseWriter, r *http.Request) *APIError {
@@ -91,37 +113,7 @@ func (s *APIServer) handleDeleteMidwifeByID(w http.ResponseWriter, r *http.Reque
 	return writeJSON(w, http.StatusOK, fmt.Sprintf("successfully deleted midwife of id %d", id))
 }
 
-func (s *APIServer) handleCreateMidwife(w http.ResponseWriter, r *http.Request) *APIError {
-	createMidwifeReq := new(CreateMidwifeRequest)
-	if err := json.NewDecoder(r.Body).Decode(createMidwifeReq); err != nil {
-		return &APIError{
-			Code:         http.StatusBadRequest,
-			ErrorMessage: "bad request data",
-		}
-	}
-
-	_, err := s.store.CreateMidwife(createMidwifeReq)
-	if err != nil {
-		return &APIError{
-			Code:         http.StatusBadRequest,
-			ErrorMessage: err.Error(),
-		}
-	}
-
-	return writeJSON(w, http.StatusOK, createMidwifeReq)
-}
-
-func (s *APIServer) handleGetMothers(w http.ResponseWriter, r *http.Request) *APIError {
-	mothers, err := s.store.GetMothers()
-	if err != nil {
-		return &APIError{
-			ErrorMessage: err.Error(),
-			Code:         http.StatusBadRequest,
-		}
-	}
-
-	return writeJSON(w, http.StatusOK, mothers)
-}
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MOTHER HANDLERS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func (s *APIServer) handleCreateMother(w http.ResponseWriter, r *http.Request) *APIError {
 	createMotherReq := new(CreateMotherRequest)
@@ -141,6 +133,18 @@ func (s *APIServer) handleCreateMother(w http.ResponseWriter, r *http.Request) *
 	}
 
 	return writeJSON(w, http.StatusOK, createMotherReq)
+}
+
+func (s *APIServer) handleGetMothers(w http.ResponseWriter, r *http.Request) *APIError {
+	mothers, err := s.store.GetMothers()
+	if err != nil {
+		return &APIError{
+			ErrorMessage: err.Error(),
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	return writeJSON(w, http.StatusOK, mothers)
 }
 
 func (s *APIServer) handleGetMotherByID(w http.ResponseWriter, r *http.Request) *APIError {
@@ -180,6 +184,8 @@ func (s *APIServer) handleDeleteMotherByID(w http.ResponseWriter, r *http.Reques
 
 	return writeJSON(w, http.StatusOK, fmt.Sprintf("successfully deleted mother of id %d", id))
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UTILITY FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // makeHTTPHandlerFunc is a function that wraps an APIFunc in a http.HandlerFunc
 func makeHTTPHandlerFunc(apiFunc APIFunc) http.HandlerFunc {

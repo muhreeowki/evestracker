@@ -75,7 +75,8 @@ func (s *PostgresStore) AddPGCrypto() error {
 	return nil
 }
 
-// Table Functions
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MIDWIFE TABLE FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func (s *PostgresStore) CreateMidwifeTable() error {
 	query := `CREATE TABLE IF NOT EXISTS midwife (
     id SERIAL PRIMARY KEY,
@@ -99,19 +100,18 @@ func (s *PostgresStore) CreateMidwifeTable() error {
 	return nil
 }
 
-// GetMidwifeByID gets a midwife from the database with the matching id
-func (s *PostgresStore) GetMidwifeByID(id int) (*Midwife, error) {
-	query := `SELECT * FROM midwife WHERE id = $1 LIMIT 1`
-	row := s.db.QueryRow(query, id)
-
-	midwife := new(Midwife)
-	midwifeFields := getFields(midwife)
-	if err := row.Scan(midwifeFields...); err != nil {
+func (s *PostgresStore) CreateMidwife(midwife *CreateMidwifeRequest) (*Midwife, error) {
+	query := `
+  INSERT INTO midwife 
+  (firstname, lastname, email, pass, created_at)
+  VALUES ($1, $2, $3, crypt($4, gen_salt('bf')), $5)
+  `
+	_, err := s.db.Query(query, midwife.FirstName, midwife.LastName, midwife.Email, midwife.Password, time.Now())
+	if err != nil {
 		log.Println(err.Error())
-		return nil, fmt.Errorf("no account found with id %d", id)
+		return nil, fmt.Errorf("failed to create midwife: %s", err.Error())
 	}
-
-	return midwife, nil
+	return nil, nil
 }
 
 func (s *PostgresStore) GetMidwives() ([]*Midwife, error) {
@@ -139,18 +139,19 @@ func (s *PostgresStore) GetMidwives() ([]*Midwife, error) {
 	return midwives, nil
 }
 
-func (s *PostgresStore) CreateMidwife(midwife *CreateMidwifeRequest) (*Midwife, error) {
-	query := `
-  INSERT INTO midwife 
-  (firstname, lastname, email, pass, created_at)
-  VALUES ($1, $2, $3, crypt($4, gen_salt('bf')), $5)
-  `
-	_, err := s.db.Query(query, midwife.FirstName, midwife.LastName, midwife.Email, midwife.Password, time.Now())
-	if err != nil {
+// GetMidwifeByID gets a midwife from the database with the matching id
+func (s *PostgresStore) GetMidwifeByID(id int) (*Midwife, error) {
+	query := `SELECT * FROM midwife WHERE id = $1 LIMIT 1`
+	row := s.db.QueryRow(query, id)
+
+	midwife := new(Midwife)
+	midwifeFields := getFields(midwife)
+	if err := row.Scan(midwifeFields...); err != nil {
 		log.Println(err.Error())
-		return nil, fmt.Errorf("failed to create midwife: %s", err.Error())
+		return nil, fmt.Errorf("no account found with id %d", id)
 	}
-	return nil, nil
+
+	return midwife, nil
 }
 
 func (s *PostgresStore) DeleteMidwifeByID(id int) error {
@@ -172,7 +173,8 @@ func (s *PostgresStore) GetMidwifeMothers(id int) (midwives []*Mother, err error
 	return midwives, nil
 }
 
-// Mother Functions
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ MOTHER TABLE FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 func (s *PostgresStore) CreateMotherTable() error {
 	query := `CREATE TABLE IF NOT EXISTS mother (
     id SERIAL PRIMARY KEY,
@@ -208,6 +210,41 @@ func (s *PostgresStore) CreateMotherTable() error {
 	fmt.Println("Mother table res: ", res)
 
 	return nil
+}
+
+func (s *PostgresStore) CreateMother(mother *CreateMotherRequest) (*Mother, error) {
+	query := `
+  INSERT INTO mother (
+    created_at, firstname, lastname, birth_date,
+    email, phone, address, partner_name, image_url,
+    lmp, conception_date, sono_date, crl, crl_date,
+    edd, rh_factor, midwife_id
+  ) VALUES (
+    CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11, $12, $13, $14, $15, $16
+  ) RETURNING *`
+	_, err := s.db.Query(query,
+		mother.FirstName,
+		nullString(mother.LastName),
+		nullTime(mother.BirthDate),
+		nullString(mother.Email),
+		nullString(mother.Phone),
+		nullString(mother.Address),
+		nullString(mother.PartnerName),
+		nullString(mother.ImageURL),
+		nullTime(mother.LMP),
+		nullTime(mother.ConceptionDate),
+		nullTime(mother.SonoDate),
+		nullFloat64(mother.CRL),
+		nullTime(mother.CRLDate),
+		nullTime(mother.EDD),
+		nullString(mother.RhFactor),
+		nullInt32(mother.MidwifeID))
+	if err != nil {
+		log.Println(err.Error())
+		return nil, fmt.Errorf("failed to create midwife: %s", err.Error())
+	}
+	return nil, nil
 }
 
 func (s *PostgresStore) GetMothers() ([]*Mother, error) {
@@ -249,41 +286,6 @@ func (s *PostgresStore) GetMotherByID(id int) (*Mother, error) {
 	return mother, nil
 }
 
-func (s *PostgresStore) CreateMother(mother *CreateMotherRequest) (*Mother, error) {
-	query := `
-  INSERT INTO mother (
-    created_at, firstname, lastname, birth_date,
-    email, phone, address, partner_name, image_url,
-    lmp, conception_date, sono_date, crl, crl_date,
-    edd, rh_factor, midwife_id
-  ) VALUES (
-    CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13, $14, $15, $16
-  ) RETURNING *`
-	_, err := s.db.Query(query,
-		mother.FirstName,
-		nullString(mother.LastName),
-		nullTime(mother.BirthDate),
-		nullString(mother.Email),
-		nullString(mother.Phone),
-		nullString(mother.Address),
-		nullString(mother.PartnerName),
-		nullString(mother.ImageURL),
-		nullTime(mother.LMP),
-		nullTime(mother.ConceptionDate),
-		nullTime(mother.SonoDate),
-		nullFloat64(mother.CRL),
-		nullTime(mother.CRLDate),
-		nullTime(mother.EDD),
-		nullString(mother.RhFactor),
-		nullInt32(mother.MidwifeID))
-	if err != nil {
-		log.Println(err.Error())
-		return nil, fmt.Errorf("failed to create midwife: %s", err.Error())
-	}
-	return nil, nil
-}
-
 func (s *PostgresStore) DeleteMotherByID(id int) error {
 	query := `DELETE FROM mother WHERE id = $1`
 	_, err := s.db.Exec(query, id)
@@ -295,6 +297,8 @@ func (s *PostgresStore) DeleteMotherByID(id int) error {
 }
 
 func (s *PostgresStore) UpdateMotherByID(int) (*Mother, error) { return nil, nil }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UTILITY FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 func getFields(v any) []interface{} {
 	s := reflect.ValueOf(v).Elem()
