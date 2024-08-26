@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -25,9 +26,10 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 
 func (s *APIServer) Run() {
 	r := chi.NewRouter()
-	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
 	r.Get("/midwife", makeHTTPHandlerFunc(s.handleGetMidwives))
 	r.Post("/midwife", makeHTTPHandlerFunc(s.handleCreateMidwife))
+	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
+	r.Delete("/midwife/{id}", makeHTTPHandlerFunc(s.handleDeleteMidwifeByID))
 
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
 
@@ -43,8 +45,7 @@ func (s *APIServer) handleGetMidwives(w http.ResponseWriter, r *http.Request) *A
 		}
 	}
 
-	writeJSON(w, http.StatusOK, midwives)
-	return nil
+	return writeJSON(w, http.StatusOK, midwives)
 }
 
 func (s *APIServer) handleGetMidwifeByID(w http.ResponseWriter, r *http.Request) *APIError {
@@ -63,8 +64,26 @@ func (s *APIServer) handleGetMidwifeByID(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	writeJSON(w, http.StatusOK, midwife)
-	return nil
+	return writeJSON(w, http.StatusOK, midwife)
+}
+
+func (s *APIServer) handleDeleteMidwifeByID(w http.ResponseWriter, r *http.Request) *APIError {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	if err := s.store.DeleteMidwifeByID(id); err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	return writeJSON(w, http.StatusOK, fmt.Sprintf("successfully deleted midwife of id %d", id))
 }
 
 func (s *APIServer) handleCreateMidwife(w http.ResponseWriter, r *http.Request) *APIError {
@@ -84,8 +103,7 @@ func (s *APIServer) handleCreateMidwife(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	writeJSON(w, http.StatusOK, createMidwifeReq)
-	return nil
+	return writeJSON(w, http.StatusOK, createMidwifeReq)
 }
 
 // makeHTTPHandlerFunc is a function that wraps an APIFunc in a http.HandlerFunc
@@ -100,7 +118,14 @@ func makeHTTPHandlerFunc(apiFunc APIFunc) http.HandlerFunc {
 	}
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) error {
+func writeJSON(w http.ResponseWriter, status int, v any) *APIError {
 	w.WriteHeader(status)
-	return json.NewEncoder(w).Encode(v)
+	err := json.NewEncoder(w).Encode(v)
+	if err != nil {
+		return &APIError{
+			ErrorMessage: err.Error(),
+			Code:         http.StatusInternalServerError,
+		}
+	}
+	return nil
 }
