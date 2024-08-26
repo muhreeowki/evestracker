@@ -32,6 +32,7 @@ func (s *APIServer) Run() {
 	r.Delete("/midwife/{id}", makeHTTPHandlerFunc(s.handleDeleteMidwifeByID))
 
 	r.Get("/mother", makeHTTPHandlerFunc(s.handleGetMothers))
+	r.Post("/mother", makeHTTPHandlerFunc(s.handleCreateMother))
 
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
 
@@ -120,7 +121,25 @@ func (s *APIServer) handleGetMothers(w http.ResponseWriter, r *http.Request) *AP
 	return writeJSON(w, http.StatusOK, mothers)
 }
 
-func (s *APIServer) handleCreateMother(w http.ResponseWriter, r *http.Request) *APIError  { return nil }
+func (s *APIServer) handleCreateMother(w http.ResponseWriter, r *http.Request) *APIError {
+	createMotherReq := new(CreateMotherRequest)
+	if err := json.NewDecoder(r.Body).Decode(createMotherReq); err != nil {
+		return &APIError{
+			Code:         http.StatusBadRequest,
+			ErrorMessage: "bad request data",
+		}
+	}
+
+	_, err := s.store.CreateMother(createMotherReq)
+	if err != nil {
+		return &APIError{
+			Code:         http.StatusBadRequest,
+			ErrorMessage: err.Error(),
+		}
+	}
+
+	return writeJSON(w, http.StatusOK, createMotherReq)
+}
 func (s *APIServer) handleGetMotherByID(w http.ResponseWriter, r *http.Request) *APIError { return nil }
 func (s *APIServer) handleDeleteMotherByID(w http.ResponseWriter, r *http.Request) *APIError {
 	return nil

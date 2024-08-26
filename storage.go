@@ -21,7 +21,7 @@ type Storage interface {
 	UpdateMidwifeByID(int) (*Midwife, error)
 	DeleteMidwifeByID(int) error
 	// Mother Functions
-	CreateMother(Midwife) (*Mother, error)
+	CreateMother(*CreateMotherRequest) (*Mother, error)
 	GetMothers() ([]*Mother, error)
 	GetMotherByID(int) *Mother
 	UpdateMotherByID(int) (*Mother, error)
@@ -176,25 +176,27 @@ func (s *PostgresStore) GetMidwifeMothers(id int) (midwives []*Mother, err error
 func (s *PostgresStore) CreateMotherTable() error {
 	query := `CREATE TABLE IF NOT EXISTS mother (
     id SERIAL PRIMARY KEY,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP,
-    firstname TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    firstname TEXT NOT NULL,
     lastname TEXT,
-    birth_date TIMESTAMP,
+    birth_date TIMESTAMP WITH TIME ZONE,
     email TEXT,
     phone TEXT,
     address TEXT,
     partner_name TEXT,
     image_url TEXT,
-    lmp TIMESTAMP,
-    conception_date TIMESTAMP,
-    sono_date TIMESTAMP,
+    lmp TIMESTAMP WITH TIME ZONE,
+    conception_date TIMESTAMP WITH TIME ZONE,
+    sono_date TIMESTAMP WITH TIME ZONE,
     crl FLOAT,
-    crl_date TIMESTAMP,
-    edd TIMESTAMP,
+    crl_date TIMESTAMP WITH TIME ZONE,
+    edd TIMESTAMP WITH TIME ZONE,
     rh_factor TEXT,
-    delivered BOOLEAN
+    delivered BOOLEAN,
+    delivery_date TIMESTAMP WITH TIME ZONE,
+    midwife_id INTEGER
   )`
 
 	res, err := s.db.Exec(query)
@@ -233,8 +235,43 @@ func (s *PostgresStore) GetMothers() ([]*Mother, error) {
 	return mothers, nil
 }
 
-func (s *PostgresStore) GetMotherByID(int) *Mother             { return nil }
-func (s *PostgresStore) CreateMother(Midwife) (*Mother, error) { return nil, nil }
+func (s *PostgresStore) GetMotherByID(int) *Mother { return nil }
+
+func (s *PostgresStore) CreateMother(mother *CreateMotherRequest) (*Mother, error) {
+	query := `
+  INSERT INTO mother (
+    created_at, firstname, lastname, birth_date,
+    email, phone, address, partner_name, image_url,
+    lmp, conception_date, sono_date, crl, crl_date,
+    edd, rh_factor, midwife_id
+  ) VALUES (
+    CURRENT_TIMESTAMP, $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11, $12, $13, $14, $15, $16
+  ) RETURNING *`
+	_, err := s.db.Query(query,
+		mother.FirstName,
+		nullString(mother.LastName),
+		nullTime(mother.BirthDate),
+		nullString(mother.Email),
+		nullString(mother.Phone),
+		nullString(mother.Address),
+		nullString(mother.PartnerName),
+		nullString(mother.ImageURL),
+		nullTime(mother.LMP),
+		nullTime(mother.ConceptionDate),
+		nullTime(mother.SonoDate),
+		nullFloat64(mother.CRL),
+		nullTime(mother.CRLDate),
+		nullTime(mother.EDD),
+		nullString(mother.RhFactor),
+		nullInt32(mother.MidwifeID))
+	if err != nil {
+		log.Println(err.Error())
+		return nil, fmt.Errorf("failed to create midwife: %s", err.Error())
+	}
+	return nil, nil
+}
+
 func (s *PostgresStore) DeleteMotherByID(int) error            { return nil }
 func (s *PostgresStore) UpdateMotherByID(int) (*Mother, error) { return nil, nil }
 
@@ -249,4 +286,32 @@ func getFields(v any) []interface{} {
 	}
 
 	return fields
+}
+
+func nullString(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: s, Valid: true}
+}
+
+func nullTime(t *time.Time) sql.NullTime {
+	if t == nil {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: *t, Valid: true}
+}
+
+func nullFloat64(f *float64) sql.NullFloat64 {
+	if f == nil {
+		return sql.NullFloat64{}
+	}
+	return sql.NullFloat64{Float64: *f, Valid: true}
+}
+
+func nullInt32(i *uint32) sql.NullInt32 {
+	if i == nil {
+		return sql.NullInt32{}
+	}
+	return sql.NullInt32{Int32: int32(*i), Valid: true}
 }

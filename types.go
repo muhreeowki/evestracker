@@ -25,30 +25,45 @@ type Midwife struct {
 }
 
 type Mother struct {
-	ID        uint      `json:"id"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	DeletedAt time.Time
-	// Patient's personal details
-	FirstName   string    `json:"firstName"`
-	LastName    string    `json:"lastName"`
-	BirthDate   time.Time `json:"birthDate"`
-	Email       string    `json:"email"`
-	Phone       string    `json:"phone"`
-	Address     string    `json:"address"`
-	PartnerName string    `json:"partnerName"`
-	ImageURL    string    `json:"imageURL"`
-	// Patients' medical details
-	LMP            time.Time `json:"lmp"`            // Last Menstrual Period
-	ConceptionDate time.Time `json:"conceptionDate"` // Date of conception
-	SonoDate       time.Time `json:"sonoDate"`       // Date of sonogram
-	CRL            float64   `json:"crl"`            // Crown Rump Length
-	CRLDate        time.Time `json:"crlDate"`        // Date of CRL
-	EDD            time.Time `json:"edd"`            // Estimated Due Date
-	RhFactor       string    `json:"rhFactor"`       // Rh Factor
-	// Delivery details
-	Delivered    bool      `json:"delivered"`    // Has the patient delivered
-	DeliveryDate time.Time `json:"deliveryDate"` // Date of delivery
-	// Midwife details
-	MidwifeID uint32 `json:"midwifeID"`
+	ID             uint            `db:"id"           json:"id"`
+	CreatedAt      time.Time       `db:"created_at"   json:"createdAt"`
+	UpdatedAt      sql.NullTime    `db:"updated_at"   json:"updatedAt"`
+	DeletedAt      sql.NullTime    `db:"deleted_at"   json:"deletedAt,omitempty"`
+	FirstName      string          `db:"firstname"    json:"firstName"    binding:"required"`
+	LastName       sql.NullString  `db:"lastname"     json:"lastName,omitempty"`
+	BirthDate      sql.NullTime    `db:"birth_date"   json:"birthDate,omitempty"`
+	Email          sql.NullString  `db:"email"        json:"email,omitempty"`
+	Phone          sql.NullString  `db:"phone"        json:"phone,omitempty"`
+	Address        sql.NullString  `db:"address"      json:"address,omitempty"`
+	PartnerName    sql.NullString  `db:"partner_name" json:"partnerName,omitempty"`
+	ImageURL       sql.NullString  `db:"image_url"    json:"imageURL,omitempty"`
+	LMP            sql.NullTime    `db:"lmp"          json:"lmp,omitempty"`
+	ConceptionDate sql.NullTime    `db:"conception_date" json:"conceptionDate,omitempty"`
+	SonoDate       sql.NullTime    `db:"sono_date"    json:"sonoDate,omitempty"`
+	CRL            sql.NullFloat64 `db:"crl"         json:"crl,omitempty"`
+	CRLDate        sql.NullTime    `db:"crl_date"     json:"crlDate,omitempty"`
+	EDD            sql.NullTime    `db:"edd"          json:"edd,omitempty"`
+	RhFactor       sql.NullString  `db:"rh_factor"    json:"rhFactor,omitempty"`
+	Delivered      sql.NullBool    `db:"delivered"    json:"delivered,omitempty"`
+	DeliveryDate   sql.NullTime    `db:"delivery_date" json:"deliveryDate,omitempty"`
+	MidwifeID      sql.NullInt64   `db:"midwife_id"   json:"midwifeID,omitempty"`
+}
+
+type CreateMotherRequest struct {
+	FirstName      string     `json:"firstName" binding:"required"`
+	LastName       string     `json:"lastName"`
+	BirthDate      *time.Time `json:"birthDate"`
+	Email          string     `json:"email"`
+	Phone          string     `json:"phone"`
+	Address        string     `json:"address"`
+	PartnerName    string     `json:"partnerName"`
+	ImageURL       string     `json:"imageURL"`
+	LMP            *time.Time `json:"lmp"`
+	ConceptionDate *time.Time `json:"conceptionDate"`
+	SonoDate       *time.Time `json:"sonoDate"`
+	CRL            *float64   `json:"crl"`
+	CRLDate        *time.Time `json:"crlDate"`
+	EDD            *time.Time `json:"edd"`
+	RhFactor       string     `json:"rhFactor"`
+	MidwifeID      *uint32    `json:"midwifeID"`
 }
