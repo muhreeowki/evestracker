@@ -14,17 +14,18 @@ import (
 // TODO: CRUD functions for Midwife and Patients
 type Storage interface {
 	// Midwife Functions
-	GetMidwifeByID(int) (*Midwife, error)
-	GetMidwives() ([]*Midwife, error)
 	CreateMidwife(*CreateMidwifeRequest) (*Midwife, error)
-	DeleteMidwifeByID(int) error
-	UpdateMidwifeByID(int) (*Midwife, error)
+	GetMidwives() ([]*Midwife, error)
+	GetMidwifeByID(int) (*Midwife, error)
 	GetMidwifeMothers(int) ([]*Mother, error)
+	UpdateMidwifeByID(int) (*Midwife, error)
+	DeleteMidwifeByID(int) error
 	// Mother Functions
-	GetMotherByID(int) *Mother
 	CreateMother(Midwife) (*Mother, error)
-	DeleteMotherByID(int) error
+	GetMothers() ([]*Mother, error)
+	GetMotherByID(int) *Mother
 	UpdateMotherByID(int) (*Mother, error)
+	DeleteMotherByID(int) error
 }
 
 type PostgresStore struct {
@@ -70,42 +71,6 @@ func (s *PostgresStore) AddPGCrypto() error {
 	}
 
 	fmt.Println("AddPGCrypto res: ", res)
-
-	return nil
-}
-
-// Table Functions
-func (s *PostgresStore) CreateMotherTable() error {
-	query := `CREATE TABLE IF NOT EXISTS mother (
-    id SERIAL PRIMARY KEY,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP,
-    firstname TEXT,
-    lastname TEXT,
-    birth_date TIMESTAMP,
-    email TEXT,
-    phone TEXT,
-    address TEXT,
-    partner_name TEXT,
-    image_url TEXT,
-    lmp TIMESTAMP,
-    conception_date TIMESTAMP,
-    sono_date TIMESTAMP,
-    crl FLOAT,
-    crl_date TIMESTAMP,
-    edd TIMESTAMP,
-    rh_factor TEXT,
-    delivered BOOLEAN
-  )`
-
-	res, err := s.db.Exec(query)
-	if err != nil {
-		log.Println(err.Error())
-		return fmt.Errorf("could not create mother table: %s", err)
-	}
-
-	fmt.Println("Mother table res: ", res)
 
 	return nil
 }
@@ -195,14 +160,79 @@ func (s *PostgresStore) DeleteMidwifeByID(id int) error {
 		log.Println(err.Error())
 		return fmt.Errorf("no account found with id %d", id)
 	}
+	return nil
+}
+
+func (s *PostgresStore) UpdateMidwifeByID(int) (*Midwife, error) { return nil, nil }
+func (s *PostgresStore) GetMidwifeMothers(id int) (midwives []*Mother, err error) {
+	_, err = s.GetMidwifeByID(id) // Midwife
+	if err != nil {
+		return nil, err
+	}
+	return midwives, nil
+}
+
+// Mother Functions
+func (s *PostgresStore) CreateMotherTable() error {
+	query := `CREATE TABLE IF NOT EXISTS mother (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP,
+    firstname TEXT,
+    lastname TEXT,
+    birth_date TIMESTAMP,
+    email TEXT,
+    phone TEXT,
+    address TEXT,
+    partner_name TEXT,
+    image_url TEXT,
+    lmp TIMESTAMP,
+    conception_date TIMESTAMP,
+    sono_date TIMESTAMP,
+    crl FLOAT,
+    crl_date TIMESTAMP,
+    edd TIMESTAMP,
+    rh_factor TEXT,
+    delivered BOOLEAN
+  )`
+
+	res, err := s.db.Exec(query)
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("could not create mother table: %s", err)
+	}
+
+	fmt.Println("Mother table res: ", res)
 
 	return nil
 }
 
-func (s *PostgresStore) UpdateMidwifeByID(int) (*Midwife, error)  { return nil, nil }
-func (s *PostgresStore) GetMidwifeMothers(int) ([]*Mother, error) { return nil, nil }
+func (s *PostgresStore) GetMothers() ([]*Mother, error) {
+	query := `SELECT * FROM mother`
 
-// Mother Functions
+	rows, err := s.db.Query(query)
+	if err != nil {
+		log.Println(err.Error())
+		return nil, fmt.Errorf("could not get mothers")
+	}
+
+	mothers := []*Mother{}
+	for rows.Next() {
+		mother := new(Mother)
+		motherFields := getFields(mother)
+
+		if err := rows.Scan(motherFields...); err != nil {
+			log.Println(err.Error())
+			return nil, fmt.Errorf("could not get midwives")
+		}
+
+		mothers = append(mothers, mother)
+	}
+
+	return mothers, nil
+}
+
 func (s *PostgresStore) GetMotherByID(int) *Mother             { return nil }
 func (s *PostgresStore) CreateMother(Midwife) (*Mother, error) { return nil, nil }
 func (s *PostgresStore) DeleteMotherByID(int) error            { return nil }

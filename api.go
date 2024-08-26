@@ -31,6 +31,8 @@ func (s *APIServer) Run() {
 	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
 	r.Delete("/midwife/{id}", makeHTTPHandlerFunc(s.handleDeleteMidwifeByID))
 
+	r.Get("/mother", makeHTTPHandlerFunc(s.handleGetMothers))
+
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
 
 	http.ListenAndServe(s.listenAddr, r)
@@ -104,6 +106,24 @@ func (s *APIServer) handleCreateMidwife(w http.ResponseWriter, r *http.Request) 
 	}
 
 	return writeJSON(w, http.StatusOK, createMidwifeReq)
+}
+
+func (s *APIServer) handleGetMothers(w http.ResponseWriter, r *http.Request) *APIError {
+	mothers, err := s.store.GetMothers()
+	if err != nil {
+		return &APIError{
+			ErrorMessage: err.Error(),
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	return writeJSON(w, http.StatusOK, mothers)
+}
+
+func (s *APIServer) handleCreateMother(w http.ResponseWriter, r *http.Request) *APIError  { return nil }
+func (s *APIServer) handleGetMotherByID(w http.ResponseWriter, r *http.Request) *APIError { return nil }
+func (s *APIServer) handleDeleteMotherByID(w http.ResponseWriter, r *http.Request) *APIError {
+	return nil
 }
 
 // makeHTTPHandlerFunc is a function that wraps an APIFunc in a http.HandlerFunc
