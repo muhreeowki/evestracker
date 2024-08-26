@@ -34,6 +34,7 @@ func (s *APIServer) Run() {
 	r.Post("/mother", makeHTTPHandlerFunc(s.handleCreateMother))
 	r.Get("/mother", makeHTTPHandlerFunc(s.handleGetMothers))
 	r.Get("/mother/{id}", makeHTTPHandlerFunc(s.handleGetMotherByID))
+	r.Delete("/mother/{id}", makeHTTPHandlerFunc(s.handleDeleteMotherByID))
 
 	log.Printf("EvesTracker API is running on port: %s", s.listenAddr)
 
@@ -162,7 +163,22 @@ func (s *APIServer) handleGetMotherByID(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *APIServer) handleDeleteMotherByID(w http.ResponseWriter, r *http.Request) *APIError {
-	return nil
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	if err := s.store.DeleteMotherByID(id); err != nil {
+		return &APIError{
+			ErrorMessage: "invalid id",
+			Code:         http.StatusBadRequest,
+		}
+	}
+
+	return writeJSON(w, http.StatusOK, fmt.Sprintf("successfully deleted mother of id %d", id))
 }
 
 // makeHTTPHandlerFunc is a function that wraps an APIFunc in a http.HandlerFunc

@@ -284,7 +284,16 @@ func (s *PostgresStore) CreateMother(mother *CreateMotherRequest) (*Mother, erro
 	return nil, nil
 }
 
-func (s *PostgresStore) DeleteMotherByID(int) error            { return nil }
+func (s *PostgresStore) DeleteMotherByID(id int) error {
+	query := `DELETE FROM mother WHERE id = $1`
+	_, err := s.db.Exec(query, id)
+	if err != nil {
+		log.Println(err.Error())
+		return fmt.Errorf("no account found with id %d", id)
+	}
+	return nil
+}
+
 func (s *PostgresStore) UpdateMotherByID(int) (*Mother, error) { return nil, nil }
 
 func getFields(v any) []interface{} {
