@@ -14,7 +14,7 @@ func main() {
 		log.Fatalf("could not connect to DB: %s", err.Error())
 	}
 	if err := store.Init(); err != nil {
-		log.Fatalf("could not connect to DB: %s", err.Error())
+		log.Fatalf("could not initalize the DB: %s", err.Error())
 	}
 
 	fmt.Println(store)

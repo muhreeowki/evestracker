@@ -7,7 +7,7 @@ import (
 )
 
 func dropTables() {
-	connStr := os.Getenv("POSTGRES_CONNSTR")
+	connStr := os.Getenv("DB_CONN_STR")
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

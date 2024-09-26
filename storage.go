@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reflect"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -33,7 +32,7 @@ type PostgresStore struct {
 }
 
 func NewPostgresStore() (*PostgresStore, error) {
-	connStr := os.Getenv("POSTGRES_CONNSTR")
+	connStr := os.Getenv("DB_CONN_STR")
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -47,7 +46,7 @@ func NewPostgresStore() (*PostgresStore, error) {
 }
 
 func (s *PostgresStore) Init() error {
-	if err := s.CreateMotherTable(); err != nil {
+	if err := s.AddPGCrypto(); err != nil {
 		log.Println(err.Error())
 		return err
 	}
@@ -55,7 +54,7 @@ func (s *PostgresStore) Init() error {
 		log.Println(err.Error())
 		return err
 	}
-	if err := s.AddPGCrypto(); err != nil {
+	if err := s.CreateMotherTable(); err != nil {
 		log.Println(err.Error())
 		return err
 	}
@@ -217,7 +216,7 @@ func (s *PostgresStore) CreateMotherTable() error {
     rh_factor TEXT,
     delivered BOOLEAN,
     delivery_date TIMESTAMP WITH TIME ZONE,
-    midwife_id INTEGER
+    midwife_id INTEGER REFERENCES midwife(id) ON DELETE CASCADE
   )`
 
 	res, err := s.db.Exec(query)
@@ -315,19 +314,5 @@ func (s *PostgresStore) DeleteMotherByID(id int) error {
 	return nil
 }
 
+// TODO: Implement
 func (s *PostgresStore) UpdateMotherByID(int) (*Mother, error) { return nil, nil }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UTILITY FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-func getFields(v any) []interface{} {
-	s := reflect.ValueOf(v).Elem()
-	numFields := s.NumField()
-	fields := make([]interface{}, numFields)
-
-	for i := 0; i < numFields; i++ {
-		field := s.Field(i)
-		fields[i] = field.Addr().Interface()
-	}
-
-	return fields
-}

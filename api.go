@@ -27,14 +27,17 @@ func NewAPIServer(listenAddr string, store Storage) *APIServer {
 func (s *APIServer) Run() {
 	r := chi.NewRouter()
 	// Midwife endpoints
+	r.Get("/midwife", makeHTTPHandlerFunc(s.handleGetMidwives)) // NOTE: This must be deleted or protected fully. Nobody should access this route.
+
 	r.Post("/midwife", makeHTTPHandlerFunc(s.handleCreateMidwife))
-	r.Get("/midwife", makeHTTPHandlerFunc(s.handleGetMidwives))
 	r.Get("/midwife/{id}", makeHTTPHandlerFunc(s.handleGetMidwifeByID))
 	r.Get("/midwife/{id}/mothers", makeHTTPHandlerFunc(s.handleGetMidwifeMothers))
 	r.Delete("/midwife/{id}", makeHTTPHandlerFunc(s.handleDeleteMidwifeByID))
+
 	// Mother endpoints
+	r.Get("/mother", makeHTTPHandlerFunc(s.handleGetMothers)) // NOTE: This must be deleted or protected fully. Nobody should access this route.
+
 	r.Post("/mother", makeHTTPHandlerFunc(s.handleCreateMother))
-	r.Get("/mother", makeHTTPHandlerFunc(s.handleGetMothers))
 	r.Get("/mother/{id}", makeHTTPHandlerFunc(s.handleGetMotherByID))
 	r.Delete("/mother/{id}", makeHTTPHandlerFunc(s.handleDeleteMotherByID))
 
@@ -204,30 +207,4 @@ func (s *APIServer) handleDeleteMotherByID(w http.ResponseWriter, r *http.Reques
 	}
 
 	return writeJSON(w, http.StatusOK, fmt.Sprintf("successfully deleted mother of id %d", id))
-}
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ UTILITY FUNCTIONS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-// makeHTTPHandlerFunc is a function that wraps an APIFunc in a http.HandlerFunc
-func makeHTTPHandlerFunc(apiFunc APIFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		err := apiFunc(w, r)
-		if err != nil {
-			// Handle ERR
-			writeJSON(w, err.Code, err.Error())
-			return
-		}
-	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) *APIError {
-	w.WriteHeader(status)
-	err := json.NewEncoder(w).Encode(v)
-	if err != nil {
-		return &APIError{
-			ErrorMessage: err.Error(),
-			Code:         http.StatusInternalServerError,
-		}
-	}
-	return nil
 }
